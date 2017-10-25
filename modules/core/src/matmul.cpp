@@ -47,6 +47,9 @@
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "intel_gpu_gemm.inl.hpp"
+#if defined(HAVE_CLINTELBLAS)
+#include <oclBLAS.h>
+#endif
 
 namespace cv
 {
@@ -893,6 +896,57 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 }
 #endif
 
+#ifdef HAVE_CLINTELBLAS
+static bool ocl_gemm_intelblas( InputArray matA, InputArray matB, double alpha,
+                      InputArray matC, double beta, OutputArray matD, int flags )
+{
+    int type = matA.type(), esz = CV_ELEM_SIZE(type);
+    bool haveC = matC.kind() != cv::_InputArray::NONE;
+
+    if ((type != CV_32FC1) || (matB.type() != type) || ((haveC)? (matC.type() != type) : false)) return false;
+
+    Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
+    bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
+
+    oclblasOperation_t transA = atrans ? OCLBLAS_OP_T : OCLBLAS_OP_N;
+    oclblasOperation_t transB = btrans ? OCLBLAS_OP_T : OCLBLAS_OP_N;
+    oclblasStatus_t status = OCLBLAS_STATUS_SUCCESS;
+
+    if (atrans)
+        sizeA = Size(sizeA.height, sizeA.width);
+    if (btrans)
+        sizeB = Size(sizeB.height, sizeB.width);
+    if (haveC && ctrans)
+        sizeC = Size(sizeC.height, sizeC.width);
+
+    Size sizeD(sizeB.width, sizeA.height);
+    
+    CV_Assert( matB.type() == type && (!haveC || matC.type() == type) );
+    CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
+
+    matD.create(sizeD, type);
+
+    Mat A = matA.getMat(), B = matB.getMat(), D = matD.getMat();
+    int M = sizeD.height, N = sizeD.width, K = sizeA.width;
+    int lda = (int)A.step / esz, ldb = (int)B.step / esz, ldd = (int)D.step / esz;
+    
+    if (haveC)
+        ctrans ? transpose(matC, matD) : matC.copyTo(matD);
+
+    float falpha = alpha;
+    float fbeta = beta;
+    oclblasHandle_t blasHandle = (oclblasHandle_t) cv::ocl::getIntelBlasHandle();
+
+    status = oclblasSgemm(blasHandle, transA, transB, M, N, K, 
+                          &falpha, 
+                          A.ptr<float>(), lda, 
+                          B.ptr<float>(), ldb, &fbeta, 
+                          D.ptr<float>(), ldd);
+
+    return status == OCLBLAS_STATUS_SUCCESS;
+}
+#endif // HAVE_CLINTELBLAS
+
 static void gemmImpl( Mat A, Mat B, double alpha,
            Mat C, double beta, Mat D, int flags )
 {
@@ -1540,6 +1594,10 @@ CV_EXPORTS void cv::hal::gemm64fc(const double* src1, size_t src1_step, const do
 void cv::gemm( InputArray matA, InputArray matB, double alpha,
            InputArray matC, double beta, OutputArray _matD, int flags )
 {
+#ifdef HAVE_CLINTELBLAS 
+    CV_OCL_RUN(ocl::haveIntelBlas() && !_matD.isUMat(), ocl_gemm_intelblas(matA, matB, alpha, matC, beta, _matD, flags))
+#endif
+
 #ifdef HAVE_CLAMDBLAS
     CV_OCL_RUN(ocl::haveAmdBlas() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat() &&
         matA.cols() > 20 && matA.rows() > 20 && matB.cols() > 20, // since it works incorrect for small sizes

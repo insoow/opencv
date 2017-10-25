@@ -240,6 +240,7 @@ OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              NOT
 OCV_OPTION(WITH_OPENCL_SVM     "Include OpenCL Shared Virtual Memory support" OFF ) # experimental
 OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
+OCV_OPTION(WITH_CLINTELBLAS    "Include Intel BLAS"                          ON)
 OCV_OPTION(WITH_DIRECTX        "Include DirectX support"                     ON   IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_MATLAB         "Include Matlab support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT))
@@ -1389,6 +1390,7 @@ if(HAVE_OPENCL)
   endif()
   status("    Use AMDFFT:"           HAVE_CLAMDFFT  THEN YES ELSE NO)
   status("    Use AMDBLAS:"          HAVE_CLAMDBLAS THEN YES ELSE NO)
+  status("    Use INTELBLAS:"        HAVE_CLINTELBLAS THEN YES ELSE NO)
 endif()
 
 # ========================== python ==========================

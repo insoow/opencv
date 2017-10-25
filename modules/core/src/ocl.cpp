@@ -94,6 +94,10 @@
 #include "ocl_deprecated.hpp"
 #endif // HAVE_OPENCL
 
+#if defined(HAVE_CLINTELBLAS)
+#include <oclBLAS.h>
+#endif
+
 #ifdef _DEBUG
 #define CV_OclDbgAssert CV_DbgAssert
 #else
@@ -382,6 +386,78 @@ bool haveAmdFft()
     return false;
 }
 
+#endif
+
+#ifdef HAVE_CLINTELBLAS
+
+
+class IntelBlasHelper
+{
+    IntelBlasHelper()
+    : _blasHandle(NULL), _isAvailable(false)
+    {
+        if (haveOpenCL())
+        {
+            oclblasStatus_t status = oclblasCreate(&_blasHandle);
+            if (status == OCLBLAS_STATUS_SUCCESS)
+            {
+                _isAvailable = true;
+            }
+        }
+        else
+        {
+            _blasHandle = NULL;
+        }
+    }
+
+    ~IntelBlasHelper()
+    {
+        if (_blasHandle)
+            oclblasDestroy(_blasHandle);
+    }
+
+public:
+    static IntelBlasHelper & getInstance()
+    {
+        CV_SINGLETON_LAZY_INIT_REF(IntelBlasHelper, new IntelBlasHelper())
+    }
+
+public:
+    inline bool isAvailable() { return _isAvailable; }
+    inline oclblasHandle_t getHandle() { return _blasHandle; }
+
+private:
+    // not supported
+    IntelBlasHelper(const IntelBlasHelper&);
+    IntelBlasHelper& operator=(const IntelBlasHelper&);
+
+private:
+    static IntelBlasHelper _instance;
+    oclblasHandle_t _blasHandle;
+    bool _isAvailable;
+};
+
+IntelBlasHelper IntelBlasHelper::_instance;
+
+bool haveIntelBlas()
+{
+    return IntelBlasHelper::getInstance().isAvailable();
+}
+
+void* getIntelBlasHandle()
+{
+    return IntelBlasHelper::getInstance().getHandle();
+}
+
+#else
+bool haveIntelBlas()
+{
+    return false;
+}
+oclblasHandle_t getIntelBlasHandle()
+{
+    return NULL;
+}
 #endif
 
 bool haveSVM()

@@ -40,6 +40,9 @@
 /* AMD's OpenCL Fast Fourier Transform Library*/
 #cmakedefine HAVE_CLAMDFFT
 
+/* Intel's BLAS */
+#cmakedefine HAVE_CLINTELBLAS
+
 /* Clp support */
 #cmakedefine HAVE_CLP
 

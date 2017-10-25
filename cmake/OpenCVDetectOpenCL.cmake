@@ -76,4 +76,39 @@ if(OPENCL_FOUND)
       list(APPEND OPENCL_INCLUDE_DIRS "${CLAMDBLAS_INCLUDE_DIR}")
     endif()
   endif()
+
+  if(WITH_CLINTELBLAS)
+    find_path(CLINTELBLAS_ROOT_DIR
+              NAMES oclBLAS.h
+              PATHS ENV CLINTELBLAS_PATH ENV ProgramFiles 
+              PATH_SUFFIXES include/oclBLAS 
+              DOC "INTEL BLAS root directory")
+      
+    find_path(CLINTELBLAS_INCLUDE_DIR
+              NAMES oclBLAS.h
+              HINTS ${CLINTELBLAS_ROOT_DIR}
+              PATH_SUFFIXES include
+              DOC "oclBLAS include directory")
+
+    #find_library(MFX_LIBRARY mfx PATHS "${root}/lib/${arch}" NO_DEFAULT_PATH)
+
+    find_library(CLINTELBLAS_LIB
+              NAMES oclBLAS
+              HINTS 
+                "/workspace/gen_library/genCL_primer/build/out"
+                "${CLINTELBLAS_ROOT_DIR}"
+                "${CLINTELBLAS_ROOT_DIR}/build/out"
+              DOC "oclBLAS library directory"
+              )
+    MESSAGE("CLINTELBLAS_LIB ${CLINTELBLAS_LIB}")
+    if(CLINTELBLAS_LIB)
+      list(APPEND OPENCL_LIBRARIES "${CLINTELBLAS_LIB}")
+    endif()
+
+    if(CLINTELBLAS_INCLUDE_DIR)
+      set(HAVE_CLINTELBLAS 1)
+      list(APPEND OPENCL_INCLUDE_DIRS "${CLINTELBLAS_INCLUDE_DIR}")
+    endif()
+
+  endif()
 endif()
